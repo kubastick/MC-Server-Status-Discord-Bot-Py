@@ -1,5 +1,6 @@
 import discord
 import settings
+import os
 from mcsrvstat import ServerStatus
 
 client = discord.Client()
@@ -18,13 +19,29 @@ async def on_message(message):
         print("Executing command: {0}".format(command))
         await client.send_message(message.channel, "Ok, I'm going to check this minecraft server IP!")
         # Fetch status
+
         address = command.replace("!sstatus ", "")
-        status = ServerStatus(address)
+        try:
+            status = ServerStatus(address)
+        except Exception as e:
+            await client.send_message(message.channel,"Sorry, but I can't find minecraft server with these ip :c")
+            print("Failed to find server: {0}".format(e))
+            return
+
+        # And the best part - send response!
+        # Try sending image first
+        try:
+            await client.send_file(message.channel, status.generate_status_image())
+            return
+        except Exception as err:
+            print(err)
+        # If sending images fails, send text message
         response = "Players online: {0} \\ {1}\nMOTD: {2}\nVersion: {3}"
         formatted_response = response.format(status.online_players, status.max_players, status.motd, status.version)
-        # And the best part - send response!
+
         await client.send_message(message.channel, "Here we go!")
         print("Response:\n{0}".format(formatted_response))
         await client.send_message(message.channel, formatted_response)
+        status.generate_status_image()
 
 client.run(settings.token())
